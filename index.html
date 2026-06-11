@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中国AI司法实践案例地图 · China AI Legal Case Map · 金杜律师事务所</title>
+  <meta name="description" content="A regularly updated atlas of AI-related cases before Chinese courts at all levels.">
+
+  <link rel="stylesheet" href="styles.css?v=20260611b">
+
+  <script src="d3.min.js"></script>
+</head>
+<body>
+
+<!-- ============== 顶部导航 ============== -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <!-- 双语 brand-mark：CSS 控制中/英主次 -->
+    <div class="brand-mark">
+      <span class="brand-zh">金杜律师事务所</span>
+      <span class="brand-en">King &amp; Wood</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" data-lang="zh">中文</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============== 版头 banner ============== -->
+<div class="masthead" role="img" aria-label="版头装饰画作《一棵松树》">
+  <div class="masthead-scrim"></div>
+  <div class="masthead-brand">
+    <span class="masthead-zh">金杜律师事务所</span>
+    <span class="masthead-en">King &amp; Wood</span>
+  </div>
+</div>
+
+<!-- ============== 主体 ============== -->
+<div class="page">
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>
+      <span data-i18n="siteTitle">中国 AI 司法实践案例图</span>
+    </h1>
+    <div class="hero-divider"></div>
+    <p class="lede" data-i18n="lede">汇集全国各级法院涉人工智能案件，按管辖法院分布及争议焦点分类。点击省份探索该地实践，进而查看具体法院的案件。</p>
+  </section>
+
+  <!-- 统计 -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="stat-cases">—</div>
+      <div class="stat-label" data-i18n="statCases">案件</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-courts">—</div>
+      <div class="stat-label" data-i18n="statCourts">管辖法院</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-issues">6</div>
+      <div class="stat-label" data-i18n="statIssues">争议焦点</div>
+    </div>
+    <!-- 第四格变成"宋律师专栏"入口按钮 -->
+    <button class="stat stat-clickable" id="stat-column" type="button">
+      <div class="stat-num">
+        <span class="stat-icon">✎</span>
+      </div>
+      <div class="stat-label" data-i18n="statColumn">宋律师专栏</div>
+      <div class="stat-hint" data-i18n="statColumnHint">点击查看 →</div>
+    </button>
+  </div>
+
+  <!-- 筛选条 -->
+  <div class="filters">
+    <div class="filter-group">
+      <span class="filter-label" data-i18n="filterYear">年份</span>
+      <div class="filter-chips" id="filter-year-chips"></div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label" data-i18n="filterIssue">争议焦点</span>
+      <div class="filter-chips" id="filter-issue-chips"></div>
+    </div>
+
+    <!-- 搜索条：左侧 AI 装饰图标 + input + 右侧搜索按钮 -->
+    <div class="search-wrap">
+      <span class="search-leading-icon" aria-hidden="true">
+        <!-- 放大镜 + sparkle（AI 暗示），单色 SVG -->
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="6"/>
+          <line x1="14.5" y1="14.5" x2="20" y2="20"/>
+          <!-- 4 角小 sparkle，AI 风格点缀 -->
+          <path d="M18 3 L18.6 4.4 L20 5 L18.6 5.6 L18 7 L17.4 5.6 L16 5 L17.4 4.4 Z" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+      <input
+        type="text"
+        class="search-input"
+        id="search-input"
+        placeholder="搜索案件名 / 案号 / 法院…"
+        data-i18n-placeholder="searchPlaceholder"
+        autocomplete="off"
+      />
+      <button class="search-btn" id="search-btn" type="button" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="10" cy="10" r="6"/>
+          <line x1="14.5" y1="14.5" x2="20" y2="20"/>
+        </svg>
+        <span class="search-btn-text" data-i18n="searchButton">搜索</span>
+        <span class="search-btn-spark" aria-hidden="true">✦</span>
+      </button>
+      <!-- 自动补全建议下拉（v6 新增） -->
+      <ul class="search-suggestions" id="search-suggestions" role="listbox"></ul>
+    </div>
+
+    <button class="reset-btn" id="reset-btn" data-i18n="resetFilters">清空筛选</button>
+  </div>
+
+  <!-- 主视图 -->
+  <div class="viewport view-overview" id="viewport">
+
+    <!-- 地图 -->
+    <section class="map-section">
+      <div class="map-wrapper">
+        <svg id="china-map" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="map-tooltip" id="map-tooltip"></div>
+      </div>
+      <div class="map-hint" id="map-hint" data-i18n="mapHint">点击有案件的省份开始探索</div>
+    </section>
+
+    <!-- 右侧 panel -->
+    <section class="panel-section" id="panel-section">
+      <!-- 由 JS 渲染 -->
+    </section>
+
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="footer">
+    <!-- 律师名片：头像 + 联系信息 + 二维码 -->
+    <div class="footer-bio">
+      <img class="footer-bio-headshot"
+           src="images/song-headshot.jpeg"
+           alt="Seagull Song" />
+      <div class="footer-bio-info">
+        <div class="footer-bio-name" data-i18n="bioName">宋海燕</div>
+        <div class="footer-bio-role" data-i18n="bioRole">知识产权部，北京丨硅谷 国际合伙人</div>
+        <div class="footer-bio-contacts">
+          <div class="footer-bio-contact-row">
+            <span class="footer-bio-label" data-i18n="bioPhoneLabel">电话</span>
+            <span class="footer-bio-value mono">+86 10 5878 5078</span>
+          </div>
+          <div class="footer-bio-contact-row">
+            <span class="footer-bio-label" data-i18n="bioEmailLabel">邮箱</span>
+            <a class="footer-bio-value mono"
+               href="mailto:seagull.song@cn.kingandwood.com">seagull.song@cn.kingandwood.com</a>
+          </div>
+        </div>
+      </div>
+      <img class="footer-bio-qr"
+           src="images/song-qr.jpeg"
+           alt="QR Code"
+           data-i18n-alt="bioQrAlt" />
+    </div>
+
+    <div class="footer-meta">
+      <p class="footer-text" data-i18n="footerNote">数据来源于公开判决、新闻报道及团队整理。本图供研究与学习用途，非正式法律意见。</p>
+      <div class="footer-credit">
+        <span data-i18n="footerCredit">© 宋海燕 2026 · 金杜律师事务所</span><br>
+        <span data-i18n="footerUpdate">案例更新至 2026 年 4 月</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<!-- 案件详情弹窗 -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- 宋律师专栏弹窗 -->
+<div class="modal-backdrop" id="column-backdrop">
+  <div class="modal modal-column">
+    <button class="modal-close" id="column-close" aria-label="Close">✕</button>
+    <div id="column-body"></div>
+  </div>
+</div>
+
+<script src="china-geo.js?v=20260611"></script>
+<script src="i18n.js"></script>
+<script src="cases.js"></script>
+<script src="app.js?v=20260611b"></script>
+
+</body>
+</html>
